@@ -37,17 +37,28 @@ class BlockModel(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        layer0 = BlockLayer(num_blocks=5,
-                            input_dim=1,
-                            output_dim=10)
-        layer1 = BlockLayer(num_blocks=1,
-                            input_dim=10,
-                            output_dim=1)
+        self.layer0 = nn.GRU(input_size=1, hidden_size=10, batch_first=True)
+        self.layer1 = nn.GRU(input_size=10, hidden_size=10, batch_first=True)
+        """
+        self.layer0 = BlockLayer(num_blocks=5,
+                                input_dim=1,
+                                output_dim=10)
+        self.layer1 = BlockLayer(num_blocks=5,
+                                input_dim=10,
+                                output_dim=10)
+        """
+        self.layer2 = nn.Linear(10,100)
+        self.softmax = nn.Softmax()
 
     def forward(self, x):
+        """
         l0 = self.layer0(x)
         l1 = self.layer1(l0)
-        return l1
+        """
+        l0,_ = self.layer0(x)
+        l1,_ = self.layer1(l0)
+        l2 = self.layer2(l1.contiguous().view(l1.size(0) * l1.size(1), -1))
+        return self.softmax(l2).view(x.size(0), x.size(1), -1)
 
 model = BlockModel()
 
@@ -56,6 +67,7 @@ if args.cuda:
 
 
 mse = nn.MSELoss()
+nll = nn.NLLLoss()
 eps = 1e-08
 
 optimizer = optim.SGD(model.parameters(), lr=args.lr)
@@ -76,7 +88,7 @@ sine_valid_loader = DataLoader(TensorDataset(X_valid, y_valid),
 
 
 def loss_func(pred, true):
-    return mse(pred, true)
+    return nll(pred[:,-1].log(), true)
 
 def train_sine(epoch):
     model.train()
