@@ -9,6 +9,7 @@ def csine(start, end, points=400):
     x = np.linspace(start, end, points)
     pi = np.pi
     curves = []
+    curves.append( np.sin(x * 2*pi/(end/0.25)) )
     curves.append( np.sin(x * 2*pi/(end/0.5)) )
     curves.append( np.sin(x * 2*pi/(end/1)) )
     curves.append( np.sin(x * 2*pi/(end/4)) )
@@ -31,6 +32,7 @@ def generate_y(sine_x):
 
 def valid_dataset(points=100):
     sine_x = np.array([
+        csine(20, 100, points=points)[1],
         csine(55, 70, points=points)[1],
         csine(33, 55, points=points)[1],
     ])
