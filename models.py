@@ -1,4 +1,15 @@
+import skorch
+import torch
+import torch.nn as nn
+
+from torch.autograd import Variable
+
+
+""" Models incapable of input-driven update rates """
+
 class ClockingCWRNN(nn.Module):
+    """Simple clocking CWRNN using free parameters for sine wave period/shift
+    """
     def __init__(self, input_dim, output_dim, num_modules, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -42,6 +53,8 @@ class ClockingCWRNN(nn.Module):
             ys.append(yi)
         return torch.stack(ys, dim=1), h
 
+
+""" Models capable of input-driven update rates"""
 
 class InputDrivenCWRNN(nn.Module):
     """simply learning sine parameters from var(sister module)"""
@@ -118,7 +131,7 @@ class SuprisalCWRNN(nn.Module):
         self.input_rec = nn.Linear(input_dim, input_dim * num_modules)
         self.hidden_rec = nn.Linear(input_dim * num_modules, input_dim * num_modules, bias=False)
 
-        self.module_periods = nn.Parameter(torch.zeros(num_modules))
+        self.module_periods = nn.Parameter(torch.zeros(num_modules) + 1)
         self.module_shifts = nn.Parameter(torch.zeros(num_modules))
 
         self.f_mod = nn.Tanh()
