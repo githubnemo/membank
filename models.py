@@ -71,6 +71,7 @@ class InputDrivenCWRNN(nn.Module):
         self.input_period = nn.Linear(input_dim, output_dim)
         self.hidden_period = nn.Linear(output_dim, output_dim, bias=False)
 
+        self.module_periods = nn.Parameter(torch.zeros(num_modules) + 1)
         self.module_shifts = nn.Parameter(torch.zeros(num_modules))
 
         self.f_mod = nn.Tanh()
@@ -85,8 +86,8 @@ class InputDrivenCWRNN(nn.Module):
         module_acts_period = acts.view(-1, self.num_modules, module_size)
 
         # use variance as indicator for surprisal and, hence, update rate
-        suprisal = module_acts_period.var(-1, keepdim=True)
-        module_periods = surprisal
+        surprisal = module_acts_period.var(-1, keepdim=True)
+        module_periods = self.module_periods + surprisal
 
         # y=(sin(x)+1)/2 so we y is in [0;1]
         gate = (torch.sin(ti * module_periods + self.module_shifts) + 1) / 2
