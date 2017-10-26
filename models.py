@@ -40,13 +40,14 @@ class ClockingCWRNN(nn.Module):
 
         return y, y
 
-    def init_hidden(self):
-        return Variable(torch.zeros(self.output_dim))
+    def init_hidden(self, use_cuda):
+        var = Variable(torch.zeros(self.output_dim))
+        return var.cuda() if use_cuda else var
 
     def forward(self, x):
         t = x.size(1)
         ys = []
-        h = self.init_hidden()
+        h = self.init_hidden(x.is_cuda)
         for ti in range(t):
             xi = x[:, ti]
             yi, h = self.step(ti, xi, h)
@@ -114,7 +115,7 @@ class InputDrivenCWRNN(nn.Module):
 
 
 
-class SuprisalCWRNN(nn.Module):
+class SurprisalCWRNN(nn.Module):
     """Surprisal through reconstruction and measuring resulting entropy.
     Inspired by Rocki (2016)
     """
@@ -136,6 +137,8 @@ class SuprisalCWRNN(nn.Module):
 
         self.f_mod = nn.Tanh()
 
+        self.log_softmax = nn.LogSoftmax()
+
     def step(self, ti, xi, h, x_pred):
         module_size = self.output_dim // self.num_modules
 
@@ -148,7 +151,7 @@ class SuprisalCWRNN(nn.Module):
 
         # compare last prediction with current x, compute surprisal from that
         module_x_pred = x_pred.view(-1, self.num_modules, self.input_dim)
-        surprisal = F.log_softmax(module_x_pred) * xi.unsqueeze(1).expand_as(module_acts_rec)
+        surprisal = self.log_softmax(module_x_pred) * xi.unsqueeze(1).expand_as(module_acts_rec)
         # compute the mean surprisal for each module
         mean_surprisal = surprisal.mean(-1)
         # use mean surprisal to drive the periodicity of the module's gate
@@ -164,14 +167,16 @@ class SuprisalCWRNN(nn.Module):
 
         return y, y, acts_rec, module_periods
 
-    def init_hidden(self):
-        return Variable(torch.zeros(self.output_dim))
+    def init_hidden(self, use_cuda):
+        var = Variable(torch.zeros(self.output_dim))
+        return var.cuda() if use_cuda else var
 
     def forward(self, x):
         t = x.size(1)
         ys = []
-        h = self.init_hidden()
+        h = self.init_hidden(x.is_cuda)
         x_pred = Variable(torch.zeros(self.input_dim * self.num_modules))
+        x_pred = x_pred.cuda() if x.is_cuda else x_pred
         ps = []
         for ti in range(t):
             xi = x[:, ti]
